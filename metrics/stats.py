@@ -18,7 +18,7 @@ def calculate_stats(equity):
     # DAILY
     # =====================
 
-    daily = df.resample("1D").last()
+    daily = df.resample("1D").last().ffill()
 
     daily["ret"] = daily["capital"].pct_change(fill_method=None)
 
@@ -38,8 +38,7 @@ def calculate_stats(equity):
     # =====================
 
     yearly_cap = daily["capital"].resample("YE").last()
-
-    yearly_ret = yearly_cap.pct_change(fill_method=None)
+    yearly_ret = yearly_cap.pct_change().dropna()
 
     avg_yearly = yearly_ret.mean()
 
