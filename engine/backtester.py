@@ -1,13 +1,19 @@
 stop_pct = 0.002
 rrr = 5
 
+
 def backtest(df):
 
     capital = 100000
-    risk_percent = 0.01
+    risk_percent = 0.0025
 
     brokerage_per_side = 20
     brokerage = brokerage_per_side * 2
+
+    # NIFTY LIMITS 2026
+    lot_size = 65
+    max_lots = 27
+    max_qty = 1800
 
     position = 0
     direction = 0
@@ -25,7 +31,10 @@ def backtest(df):
         signal = df["signal"].iloc[i]
         price = float(df["Close"].iloc[i])
 
+        # =====================
         # ENTRY
+        # =====================
+
         if position == 0 and signal != 0:
 
             risk_amount = capital * risk_percent
@@ -35,13 +44,25 @@ def backtest(df):
 
             stop_distance = entry * stop_pct
 
-            if stop_distance == 0:
+            if stop_distance <= 0:
                 continue
 
-            qty = int(risk_amount / stop_distance)
+            raw_qty = risk_amount / stop_distance
 
-            if qty < 1:
-                qty = 1
+            # convert to lots
+            lots = int(raw_qty / lot_size)
+
+            if lots < 1:
+                lots = 1
+
+            # limit lots per order
+            lots = min(lots, max_lots)
+
+            qty = lots * lot_size
+
+            # limit max quantity per order
+            if qty > max_qty:
+                qty = max_qty
 
             if direction == 1:
                 stop = entry - stop_distance
@@ -53,7 +74,10 @@ def backtest(df):
 
             position = 1
 
+        # =====================
         # EXIT
+        # =====================
+
         if position == 1:
 
             exit_trade = False
@@ -69,16 +93,9 @@ def backtest(df):
             if exit_trade:
 
                 if direction == 1:
-                    if price <= stop:
-                        exit_price = stop
-                    else:
-                        exit_price = target
-
+                    exit_price = stop if price <= stop else target
                 else:
-                    if price >= stop:
-                        exit_price = stop
-                    else:
-                        exit_price = target
+                    exit_price = stop if price >= stop else target
 
                 pnl = (exit_price - entry) * qty * direction
                 pnl -= brokerage

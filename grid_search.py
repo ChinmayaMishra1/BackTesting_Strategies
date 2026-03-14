@@ -36,7 +36,7 @@ data = data.sort_index()
 
 # use smaller data for speed (optional)
 end = data.index.max()
-start = end - pd.DateOffset(months=60)
+start = end - pd.DateOffset(months=120)
 
 data = data.loc[start:end]
 
