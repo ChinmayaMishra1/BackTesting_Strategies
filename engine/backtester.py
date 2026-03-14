@@ -6,9 +6,8 @@ def backtest(df):
     capital = 100000
     risk_percent = 0.01
 
-
     brokerage_per_side = 20
-    brokerage = brokerage_per_side * 2   # 40 per trade
+    brokerage = brokerage_per_side * 2
 
     position = 0
     direction = 0
@@ -26,10 +25,10 @@ def backtest(df):
         signal = df["signal"].iloc[i]
         price = float(df["Close"].iloc[i])
 
-        risk_amount = capital * risk_percent
-
         # ENTRY
         if position == 0 and signal != 0:
+
+            risk_amount = capital * risk_percent
 
             entry = price
             direction = signal
@@ -39,15 +38,18 @@ def backtest(df):
             if stop_distance == 0:
                 continue
 
-            qty = max(1, risk_amount / stop_distance)
+            qty = int(risk_amount / stop_distance)
+
+            if qty < 1:
+                qty = 1
 
             if direction == 1:
                 stop = entry - stop_distance
-                target = entry + (stop_distance * rrr)
+                target = entry + stop_distance * rrr
 
             elif direction == -1:
                 stop = entry + stop_distance
-                target = entry - (stop_distance * rrr)
+                target = entry - stop_distance * rrr
 
             position = 1
 
@@ -66,25 +68,37 @@ def backtest(df):
 
             if exit_trade:
 
-                pnl = (price - entry) * qty * direction
+                if direction == 1:
+                    if price <= stop:
+                        exit_price = stop
+                    else:
+                        exit_price = target
 
-                pnl -= brokerage   # ← 40 rupees
+                else:
+                    if price >= stop:
+                        exit_price = stop
+                    else:
+                        exit_price = target
+
+                pnl = (exit_price - entry) * qty * direction
+                pnl -= brokerage
 
                 capital += pnl
 
                 trades.append({
                     "date": df.index[i],
                     "entry": entry,
-                    "exit": price,
+                    "exit": exit_price,
                     "qty": qty,
                     "direction": direction,
                     "pnl": pnl,
-                    "capital": capital,
-                    "rrr": rrr,
-                    "stop_pct": stop_pct
+                    "capital": capital
                 })
 
                 position = 0
+
+                if capital <= 0:
+                    break
 
         equity.append({
             "date": df.index[i],

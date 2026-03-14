@@ -6,14 +6,13 @@ def calculate_stats(equity):
 
     df = pd.DataFrame(equity)
 
-    # ---------- ensure date ----------
     df["date"] = pd.to_datetime(df["date"])
 
     df = df.sort_values("date")
 
     df.set_index("date", inplace=True)
 
-    df["returns"] = df["capital"].pct_change()
+    df["returns"] = df["capital"].pct_change(fill_method=None)
 
     # =====================
     # DAILY
@@ -30,7 +29,7 @@ def calculate_stats(equity):
     # MONTHLY
     # =====================
 
-    monthly = daily["capital"].resample("1ME").last().pct_change()
+    monthly = daily["capital"].resample("ME").last().pct_change(fill_method=None)
 
     avg_monthly = monthly.mean()
 
@@ -38,14 +37,14 @@ def calculate_stats(equity):
     # YEARLY
     # =====================
 
-    yearly_cap = daily["capital"].resample("1YE").last()
+    yearly_cap = daily["capital"].resample("YE").last()
 
-    yearly_ret = yearly_cap.pct_change()
+    yearly_ret = yearly_cap.pct_change(fill_method=None)
 
     avg_yearly = yearly_ret.mean()
 
     # =====================
-    # RUNNING DRAWDOWN %
+    # DRAWDOWN
     # =====================
 
     df["peak"] = df["capital"].cummax()
@@ -58,19 +57,12 @@ def calculate_stats(equity):
     # SHARPE
     # =====================
 
-    sharpe = (
-        df["returns"].mean()
-        / df["returns"].std()
-        * np.sqrt(252)
-        if df["returns"].std() != 0
-        else 0
-    )
+    daily_ret = daily["capital"].pct_change(fill_method=None)
 
-    # =====================
-    # CALMAR
-    # =====================
-
-    calmar = avg_yearly / abs(max_dd) if max_dd != 0 else 0
+    if daily_ret.std() != 0:
+        sharpe = daily_ret.mean() / daily_ret.std() * np.sqrt(252)
+    else:
+        sharpe = 0
 
     # =====================
     # CAGR
@@ -81,21 +73,23 @@ def calculate_stats(equity):
 
     days = (df.index[-1] - df.index[0]).days
 
-    years = days / 365 if days > 0 else 1
+    years = days / 365 if days > 0 else 0
 
-    if years > 0 and end_cap > 0:
-        try:
-            cagr = (end_cap / start_cap) ** (1 / years) - 1
-        except:
-            cagr = 0
+    if years > 0 and end_cap > 0 and start_cap > 0:
+        cagr = (end_cap / start_cap) ** (1 / years) - 1
     else:
         cagr = 0
 
     cagr_pct = cagr * 100
 
     # =====================
-    # YEARLY AVG %
+    # CALMAR
     # =====================
+
+    if max_dd != 0:
+        calmar = cagr / abs(max_dd / 100)
+    else:
+        calmar = 0
 
     avg_yearly_pct = yearly_ret.mean() * 100
 

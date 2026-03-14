@@ -36,7 +36,7 @@ data = data.sort_index()
 
 # use smaller data for speed (optional)
 end = data.index.max()
-start = end - pd.DateOffset(months=120)
+start = end - pd.DateOffset(months=60)
 
 data = data.loc[start:end]
 
@@ -49,8 +49,8 @@ base_df = strategy(data)
 # GRID
 # =========================
 
-stop_list = np.arange(0.001, 0.0051, 0.0005)
-rrr_list = np.arange(1, 6, 0.5)
+stop_list = np.round(np.arange(0.001, 0.0051, 0.0005), 6)
+rrr_list = np.round(np.arange(1, 6, 0.5), 6)
 
 params = [(s, r) for s in stop_list for r in rrr_list]
 
@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
     start_time = time.time()
 
-    cores = cpu_count()
+    cores = max(1, cpu_count() - 1)
 
     print("Using cores:", cores)
 
